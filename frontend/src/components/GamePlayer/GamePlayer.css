@@ -1,0 +1,33 @@
+.game-player {
+  min-height: 100vh;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+.player-header {
+  background: #16213e;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #2a2a4e;
+}
+
+.player-title {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.game-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+#game-player-canvas {
+  display: block;
+}
