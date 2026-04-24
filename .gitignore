@@ -1,3 +1,25 @@
-backend/__pycache__
-backend/routers/__pycache__
+# Python
+backend/__pycache__/
+backend/routers/__pycache__/
 backend/*.db
+backend/.venv/
+backend/uploads/*
+!backend/uploads/.gitkeep
+__pycache__/
+*.pyc
+*.pyo
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# Logs
+logs/
+*.log
+*.pid
+
+# OS
+.DS_Store
+Thumbs.db
