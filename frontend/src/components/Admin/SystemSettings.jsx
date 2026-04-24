@@ -78,7 +78,7 @@ export default function SystemSettings({ overviewOnly = false }) {
                   <input
                     type="checkbox"
                     className="toggle-input"
-                    checked={settings.registration_enabled || false}
+                    checked={!!settings.registration_enabled}
                     onChange={e => setSettings(prev => ({ ...prev, registration_enabled: e.target.checked }))}
                   />
                   <span className="toggle-slider" />

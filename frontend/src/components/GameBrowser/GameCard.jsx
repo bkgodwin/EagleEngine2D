@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 export default function GameCard({ game }) {
   const navigate = useNavigate()
   const tags = Array.isArray(game.tags) ? game.tags : []
-  const thumbColors = ['#533483, #e94560', '#1a6bdb, #00bcd4', '#4caf50, #8bc34a', '#ff9800, #f44336']
+  const thumbColors = ['#533483 0%, #e94560 100%', '#1a6bdb 0%, #00bcd4 100%', '#4caf50 0%, #8bc34a 100%', '#ff9800 0%, #f44336 100%']
   const grad = thumbColors[game.id % thumbColors.length] || thumbColors[0]
 
   return (
