@@ -49,9 +49,11 @@ class ConnectionManager:
     async def disconnect(self, session_id: str, websocket: WebSocket):
         async with self._lock:
             room = self._rooms.get(session_id, [])
+            remaining = [c for c in room if c["ws"] is not websocket]
             player_info = next((c["player"] for c in room if c["ws"] is websocket), None)
-            self._rooms[session_id] = [c for c in room if c["ws"] is not websocket]
-            if not self._rooms[session_id]:
+            if remaining:
+                self._rooms[session_id] = remaining
+            elif session_id in self._rooms:
                 del self._rooms[session_id]
 
         if player_info:

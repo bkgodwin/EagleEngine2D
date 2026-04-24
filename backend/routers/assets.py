@@ -1,7 +1,7 @@
 import mimetypes
 import uuid
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import aiofiles
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -99,7 +99,7 @@ async def upload_asset(
 def list_assets(
     skip: int = 0,
     limit: int = 100,
-    asset_type: str = None,
+    asset_type: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(auth_utils.get_current_user),
 ):

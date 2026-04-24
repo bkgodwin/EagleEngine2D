@@ -31,8 +31,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def _get_user_from_token(token: str, db: Session):
-    """Shared helper: decode JWT and return User or raise 401."""
+def get_user_from_token(token: str, db: Session):
+    """Decode JWT and return User, or raise 401. Public for use by WebSocket endpoints."""
     from models import User  # avoid circular import at module level
 
     credentials_exc = HTTPException(
@@ -58,7 +58,7 @@ def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
-    user = _get_user_from_token(token, db)
+    user = get_user_from_token(token, db)
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
     return user

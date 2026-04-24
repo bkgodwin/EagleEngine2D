@@ -7,6 +7,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm import Session
 
+from auth import get_user_from_token
 import auth as auth_utils
 from config import MAX_PLAYERS_PER_SESSION, MIN_PLAYERS_PER_SESSION
 from database import get_db
@@ -130,7 +131,7 @@ async def multiplayer_ws(
         return
 
     try:
-        user = auth_utils._get_user_from_token(token, db)
+        user = get_user_from_token(token, db)
     except HTTPException:
         await websocket.accept()
         await websocket.send_json({"type": "error", "message": "Invalid or expired token"})
