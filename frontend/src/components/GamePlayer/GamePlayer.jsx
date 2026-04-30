@@ -29,41 +29,45 @@ export default function GamePlayer({ gameData: gameProp, inline = false }) {
     let mounted = true
 
     const initGame = async () => {
-      const Phaser = (await import('phaser')).default
-      const GameScene = (await import('../../game/GameScene.js')).default
-      const PhysicsConfig = (await import('../../game/PhysicsConfig.js')).default
+      try {
+        const Phaser = (await import('phaser')).default
+        const GameScene = (await import('../../game/GameScene.js')).default
+        const PhysicsConfig = (await import('../../game/PhysicsConfig.js')).default
 
-      if (!mounted || !containerRef.current) return
+        if (!mounted || !containerRef.current) return
 
-      const mapData = game.game_data || {}
-      const gameConfig = mapData.designConfig || {}
-      const scene = new GameScene()
+        const mapData = game.game_data || {}
+        const gameConfig = mapData.designConfig || {}
 
-      phaserGame = new Phaser.Game({
-        type: Phaser.AUTO,
-        parent: containerId,
-        width: containerRef.current.offsetWidth || 800,
-        height: containerRef.current.offsetHeight || 500,
-        physics: PhysicsConfig,
-        backgroundColor: '#0a0a2e',
-        scene: {
-          key: 'GameScene',
-          init() { GameScene.prototype.init.call(this, { mapData, gameConfig }) },
-          preload() { GameScene.prototype.preload.call(this) },
-          create() { GameScene.prototype.create.call(this) },
-          update() { GameScene.prototype.update.call(this) }
+        // Instantiate the scene class and inject data via an init override so
+        // Phaser calls the real GameScene prototype methods with correct `this`.
+        const gameScene = new GameScene()
+        const origInit = GameScene.prototype.init
+        gameScene.init = function (data) {
+          origInit.call(this, { mapData, gameConfig, ...data })
         }
-      })
 
-      gameRef.current = phaserGame
+        phaserGame = new Phaser.Game({
+          type: Phaser.AUTO,
+          parent: containerId,
+          width: containerRef.current.offsetWidth || 800,
+          height: containerRef.current.offsetHeight || 500,
+          physics: PhysicsConfig,
+          backgroundColor: '#0a0a2e',
+          scene: gameScene
+        })
+
+        gameRef.current = phaserGame
+      } catch (err) {
+        if (mounted) setError('Failed to start game: ' + err.message)
+      }
     }
 
     initGame()
 
     return () => {
       mounted = false
-      if (phaserGame) { phaserGame.destroy(true); phaserGame = null }
-      if (gameRef.current) { gameRef.current = null }
+      if (gameRef.current) { gameRef.current.destroy(true); gameRef.current = null }
     }
   }, [game, containerId])
 
