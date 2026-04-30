@@ -16,6 +16,7 @@ export default class EditorScene extends Phaser.Scene {
     this.callbacks = {
       onTilePlaced: data.onTilePlaced || (() => {}),
       onObjectPlaced: data.onObjectPlaced || (() => {}),
+      onObjectRemoved: data.onObjectRemoved || (() => {}),
       onSelectionChanged: data.onSelectionChanged || (() => {}),
       onLog: data.onLog || (() => {})
     }
@@ -35,11 +36,13 @@ export default class EditorScene extends Phaser.Scene {
     this.panStartY = 0
     this.camStartX = 0
     this.camStartY = 0
+    this.selectedInstanceId = null
 
     this.gridGraphics = this.add.graphics()
     this.tileGraphics = this.add.graphics()
     this.objectGraphics = this.add.graphics()
     this.cursorGraphics = this.add.graphics()
+    this.selectionGraphics = this.add.graphics()
     this.objectTextGroup = this.add.group()
 
     this.cameras.main.setBounds(0, 0, MAP_W * TILE_SIZE, MAP_H * TILE_SIZE)
@@ -53,6 +56,8 @@ export default class EditorScene extends Phaser.Scene {
     this.input.on('wheel', this.handleWheel, this)
 
     this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+    this.deleteKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DELETE)
+    this.backspaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.BACKSPACE)
 
     this.callbacks.onLog('Editor scene ready', 'info')
   }
@@ -63,10 +68,20 @@ export default class EditorScene extends Phaser.Scene {
       const { tx, ty } = this.getPointerTile(pointer)
       this.highlightCursor(tx, ty)
     }
+
+    // Delete selected object with Delete or Backspace
+    if (this.selectedInstanceId) {
+      if (Phaser.Input.Keyboard.JustDown(this.deleteKey) || Phaser.Input.Keyboard.JustDown(this.backspaceKey)) {
+        this._deleteSelectedObject()
+      }
+    }
   }
 
   setTool(tool) {
     this.tool = tool
+    if (tool !== 'select') {
+      this._clearSelection()
+    }
   }
 
   setActiveTile(tile) {
@@ -111,8 +126,14 @@ export default class EditorScene extends Phaser.Scene {
     }
 
     if (pointer.leftButtonDown()) {
-      this.isPainting = true
       const { tx, ty } = this.getPointerTile(pointer)
+
+      if (this.tool === 'select') {
+        this._handleSelectClick(tx, ty)
+        return
+      }
+
+      this.isPainting = true
 
       if (this.tool === 'place') {
         if (this.activeTile) {
@@ -122,6 +143,7 @@ export default class EditorScene extends Phaser.Scene {
         }
       } else if (this.tool === 'erase') {
         this.eraseTileAt(tx, ty)
+        this.eraseObjectAt(tx, ty)
       }
     }
   }
@@ -179,6 +201,20 @@ export default class EditorScene extends Phaser.Scene {
     this.renderAllTiles()
   }
 
+  eraseObjectAt(tx, ty) {
+    const wx = tx * TILE_SIZE + TILE_SIZE / 2
+    const wy = ty * TILE_SIZE + TILE_SIZE / 2
+    const idx = this.placedObjects.findIndex(o =>
+      Math.abs(o.x - wx) <= TILE_SIZE / 2 && Math.abs(o.y - wy) <= TILE_SIZE / 2
+    )
+    if (idx > -1) {
+      const obj = this.placedObjects[idx]
+      this.placedObjects.splice(idx, 1)
+      this.callbacks.onObjectRemoved(obj.id)
+      this.renderObjects()
+    }
+  }
+
   placeObjectAt(tx, ty) {
     if (!this.activeObject) return
     const x = tx * TILE_SIZE + TILE_SIZE / 2
@@ -194,6 +230,76 @@ export default class EditorScene extends Phaser.Scene {
     this.callbacks.onObjectPlaced(entry)
     this.renderObjects()
   }
+
+  // ---------------------------------------------------------------------------
+  // Select tool
+  // ---------------------------------------------------------------------------
+
+  _handleSelectClick(tx, ty) {
+    const wx = tx * TILE_SIZE + TILE_SIZE / 2
+    const wy = ty * TILE_SIZE + TILE_SIZE / 2
+
+    // Find the object closest to the click within one tile
+    let bestObj = null
+    let bestDist = TILE_SIZE
+
+    for (const obj of this.placedObjects) {
+      const dist = Math.sqrt((obj.x - wx) ** 2 + (obj.y - wy) ** 2)
+      if (dist < bestDist) {
+        bestDist = dist
+        bestObj = obj
+      }
+    }
+
+    if (bestObj) {
+      this.selectedInstanceId = bestObj.id
+      this._renderSelectionHighlight(bestObj)
+      this.callbacks.onSelectionChanged(bestObj)
+      this.callbacks.onLog(`Selected: ${getObjectById(bestObj.objectId)?.name || bestObj.objectId} (press Delete to remove)`, 'info')
+    } else {
+      this._clearSelection()
+      this.callbacks.onSelectionChanged(null)
+    }
+  }
+
+  _renderSelectionHighlight(obj) {
+    this.selectionGraphics.clear()
+    if (!obj) return
+    const px = obj.x - TILE_SIZE / 2
+    const py = obj.y - TILE_SIZE / 2
+    this.selectionGraphics.lineStyle(3, 0x00e676, 1)
+    this.selectionGraphics.strokeRect(px - 2, py - 2, TILE_SIZE + 4, TILE_SIZE + 4)
+    // Corner handles
+    const hs = 6
+    this.selectionGraphics.fillStyle(0x00e676, 1)
+    this.selectionGraphics.fillRect(px - 4, py - 4, hs, hs)
+    this.selectionGraphics.fillRect(px + TILE_SIZE - 2, py - 4, hs, hs)
+    this.selectionGraphics.fillRect(px - 4, py + TILE_SIZE - 2, hs, hs)
+    this.selectionGraphics.fillRect(px + TILE_SIZE - 2, py + TILE_SIZE - 2, hs, hs)
+  }
+
+  _clearSelection() {
+    this.selectedInstanceId = null
+    this.selectionGraphics.clear()
+  }
+
+  _deleteSelectedObject() {
+    if (!this.selectedInstanceId) return
+    const idx = this.placedObjects.findIndex(o => o.id === this.selectedInstanceId)
+    if (idx > -1) {
+      const obj = this.placedObjects[idx]
+      this.placedObjects.splice(idx, 1)
+      this.callbacks.onObjectRemoved(obj.id)
+      this.callbacks.onLog(`Deleted: ${getObjectById(obj.objectId)?.name || obj.objectId}`, 'info')
+      this.renderObjects()
+    }
+    this._clearSelection()
+    this.callbacks.onSelectionChanged(null)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rendering
+  // ---------------------------------------------------------------------------
 
   renderAllTiles() {
     this.tileGraphics.clear()
@@ -243,6 +349,16 @@ export default class EditorScene extends Phaser.Scene {
       }).setOrigin(0.5, 0.5)
       this.objectTextGroup.add(text)
     }
+
+    // Re-render selection highlight if an object is selected
+    if (this.selectedInstanceId) {
+      const selObj = this.placedObjects.find(o => o.id === this.selectedInstanceId)
+      if (selObj) {
+        this._renderSelectionHighlight(selObj)
+      } else {
+        this._clearSelection()
+      }
+    }
   }
 
   highlightCursor(tx, ty) {
@@ -264,6 +380,7 @@ export default class EditorScene extends Phaser.Scene {
   importMapData(data) {
     this.placedTiles = data.tiles || {}
     this.placedObjects = data.objects || []
+    this._clearSelection()
     this.renderAllTiles()
     this.renderObjects()
   }

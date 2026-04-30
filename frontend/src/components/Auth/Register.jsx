@@ -5,7 +5,7 @@ import Button from '../Common/Button.jsx'
 import './Auth.css'
 
 export default function Register() {
-  const { register } = useAuth()
+  const { register, login } = useAuth()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
@@ -28,7 +28,8 @@ export default function Register() {
     setLoading(true)
     try {
       await register(username, email, password)
-      navigate('/login')
+      await login(username, password)
+      navigate('/')
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed')
     } finally {

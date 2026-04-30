@@ -13,71 +13,9 @@ const LevelCanvas = forwardRef(function LevelCanvas(props, ref) {
     let game = null
     let mounted = true
 
-    const init = async () => {
-      const Phaser = (await import('phaser')).default
-      const EditorScene = (await import('../../game/EditorScene.js')).default
-      const { createPhaserGame, destroyPhaserGame } = await import('../../game/PhaserGame.js')
-
-      if (!mounted || !containerRef.current) return
-
-      const scene = new EditorScene()
-      sceneRef.current = scene
-
-      const callbacks = {
-        onTilePlaced: (layer, tx, ty, tileId) => {
-          if (tileId === null) {
-            editor.eraseTile(layer, tx, ty)
-          } else {
-            editor.placeTile(layer, tx, ty, tileId)
-          }
-        },
-        onObjectPlaced: (entry) => {
-          editor.placeObject(entry.objectId, entry.x, entry.y, entry.props)
-        },
-        onSelectionChanged: () => {},
-        onLog: (msg, type) => editor.addLog(msg, type),
-        getEditorState: () => ({ tiles: editor.placedTiles, objects: editor.placedObjects })
-      }
-
-      scene._initCallbacks = callbacks
-
-      game = createPhaserGame(containerId, [{
-        ...scene,
-        init: function(data) { EditorScene.prototype.init.call(this, { ...callbacks, ...data }) }
-      }], {
-        width: containerRef.current.offsetWidth,
-        height: Math.max(containerRef.current.offsetHeight - 40, 400),
-        physics: PhysicsConfig,
-        backgroundColor: '#1a1a2e',
-        scene: {
-          key: 'EditorScene',
-          init(data) {
-            this._callbacks = callbacks
-            this._getEditorState = callbacks.getEditorState
-          },
-          preload() {},
-          create() { EditorScene.prototype.create.call(this) },
-          update() { EditorScene.prototype.update.call(this) }
-        }
-      })
-
-      gameRef.current = game
-
-      if (mounted) {
-        const actualScene = game.scene.getScene('EditorScene')
-        if (actualScene) {
-          Object.setPrototypeOf(actualScene, EditorScene.prototype)
-          actualScene.callbacks = callbacks
-          actualScene.getEditorState = callbacks.getEditorState
-          sceneRef.current = actualScene
-        }
-      }
-    }
-
     const initDirect = async () => {
       const Phaser = (await import('phaser')).default
       const EditorScene = (await import('../../game/EditorScene.js')).default
-      const { createPhaserGame } = await import('../../game/PhaserGame.js')
 
       if (!mounted || !containerRef.current) return
 
@@ -88,6 +26,9 @@ const LevelCanvas = forwardRef(function LevelCanvas(props, ref) {
         },
         onObjectPlaced: (entry) => {
           editor.placeObject(entry.objectId, entry.x, entry.y, entry.props)
+        },
+        onObjectRemoved: (instanceId) => {
+          editor.removeObject(instanceId)
         },
         onSelectionChanged: () => {},
         onLog: (msg, type) => editor.addLog(msg, type),
@@ -118,9 +59,6 @@ const LevelCanvas = forwardRef(function LevelCanvas(props, ref) {
           scene.callbacks = callbacks
           scene.getEditorState = callbacks.getEditorState
           sceneRef.current = scene
-          scene.events.on('create', () => {
-            scene.callbacks = callbacks
-          })
         }
       })
     }
@@ -187,7 +125,7 @@ const LevelCanvas = forwardRef(function LevelCanvas(props, ref) {
         <button className="tool-btn" onClick={() => ref.current?.zoomOut()} title="Zoom Out">−</button>
       </div>
       <div style={{ position: 'absolute', bottom: '10px', left: '10px', color: '#8892b0', fontSize: '11px', background: 'rgba(0,0,0,0.5)', padding: '3px 8px', borderRadius: '4px' }}>
-        Space/Middle Mouse: Pan · Scroll: Zoom · 50×30 tiles
+        Space/Middle Mouse: Pan · Scroll: Zoom · Select tool: click object → Delete to remove · 50×30 tiles
       </div>
     </div>
   )

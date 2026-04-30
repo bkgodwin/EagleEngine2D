@@ -35,13 +35,13 @@ export default function Login() {
         {error && <div className="auth-error">{error}</div>}
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Username</label>
+            <label className="form-label">Username or Email</label>
             <input
               className="form-input"
               type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              placeholder="Enter your username or email"
               required
               autoFocus
             />

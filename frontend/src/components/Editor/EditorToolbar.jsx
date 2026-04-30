@@ -67,7 +67,7 @@ export default function EditorToolbar({ canvasRef }) {
     setPublishing(true)
     setPublishError('')
     try {
-      const tags = publishTags.split(',').map(t => t.trim()).filter(Boolean)
+      const tags = publishTags.split(',').map(t => t.trim()).filter(Boolean).join(',')
       await publishGame({ project_id: editor.projectId, title: publishTitle, description: publishDesc, tags })
       editor.addLog('Game published!', 'info')
       setShowPublish(false)
