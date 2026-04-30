@@ -44,7 +44,7 @@ export default function GamePlayer({ gameData: gameProp, inline = false }) {
         const gameScene = new GameScene()
         const origInit = GameScene.prototype.init
         gameScene.init = function (data) {
-          origInit.call(this, { mapData, gameConfig })
+          origInit.call(this, { mapData, gameConfig, ...data })
         }
 
         phaserGame = new Phaser.Game({

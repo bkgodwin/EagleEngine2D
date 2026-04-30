@@ -30,7 +30,7 @@ export default class GameScene extends Phaser.Scene {
     this.trapObjects = []
     this.lastAttackTime = 0
 
-    this.isTopDown = this.gameConfig.gameType === 'top-down'
+    this.isTopDown = this.gameConfig?.gameType === 'top-down'
 
     // Disable gravity for top-down games
     if (this.isTopDown) {
@@ -196,15 +196,8 @@ export default class GameScene extends Phaser.Scene {
       plat.startY = obj.y
       plat.speed = obj.props?.speed || 80
       plat.range = (obj.props?.range || 5) * TILE_SIZE
-      this.physics.add.collider(this.player, plat, this._handlePlatformCollision, null, this)
+      this.physics.add.collider(this.player, plat)
       this.movingPlatforms.push(plat)
-    }
-  }
-
-  _handlePlatformCollision(player, plat) {
-    // Only treat as solid when player hits from above
-    if (player.body.velocity.y < 0) {
-      this.physics.world.overlapSeparation = true
     }
   }
 
@@ -244,13 +237,16 @@ export default class GameScene extends Phaser.Scene {
         const trap = this.add.rectangle(obj.x, obj.y, TILE_SIZE, TILE_SIZE, color)
         this.physics.add.existing(trap, true)
         trap.setVisible(false)
-        let overlapObj = null
+        trap.isActive = false
+        // Only damage when the trap is visually active
+        this.physics.add.overlap(this.player, trap, () => {
+          if (trap.isActive) this._playerHit()
+        })
         const activateTrap = () => {
+          trap.isActive = true
           trap.setVisible(true)
-          if (!overlapObj) {
-            overlapObj = this.physics.add.overlap(this.player, trap, () => this._playerHit())
-          }
           this.time.delayedCall(duration, () => {
+            trap.isActive = false
             trap.setVisible(false)
           })
         }
@@ -733,8 +729,8 @@ export default class GameScene extends Phaser.Scene {
 
       if (pRight > platLeft && pLeft < platRight && Math.abs(pBottom - platTop) < 8) {
         const dt = this.game.loop.delta / 1000
-        this.player.x += plat.body.velocity.x * dt
-        this.player.body.reset(this.player.x, this.player.y)
+        const newX = this.player.body.x + plat.body.velocity.x * dt
+        this.player.body.setPosition(newX, this.player.body.y)
       }
     }
   }
